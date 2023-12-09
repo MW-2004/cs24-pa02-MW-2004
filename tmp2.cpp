@@ -95,6 +95,7 @@ int main(int argc, char **argv) {
     }
 
     vector<best> bests;
+    bests.reserve(1000);
     getline(prefixFile, line);
     do {
         int lower = indexes[line[0] - 'a'];
@@ -104,7 +105,7 @@ int main(int argc, char **argv) {
             auto ed = upper_bound(st, movies.begin() + upper, line, comparer{});
             vector<reference_wrapper<movie>> founds(st, ed);
             stable_sort(founds.begin(), founds.end(), [](const movie &a, const movie &b) { return a.rat > b.rat; });
-            for (movie &e : founds) outFile << e.name << ", " << e.rat << '\n';
+            for (movie e : founds) outFile << e.name << ", " << e.rat << '\n';
             if (founds.empty()) {
                 exit(1);
             }

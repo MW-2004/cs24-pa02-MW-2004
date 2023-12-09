@@ -2,78 +2,53 @@
 // Instructor: Diba Mirza
 // Student name: Marcus Wu
 #include <iostream>
+#include <functional>
 #include <fstream>
 #include <string>
-#include <ctime>
 #include <vector>
-#include <cstring>
 #include <algorithm>
-#include <limits.h>
-#include <iomanip>
 #include "movies.h"
-#include <array>
 using namespace std;
 bool parseLine(string &line, string &movieName, double &movieRating) {
     int commaIndex = line.find_last_of(",");
     movieName = line.substr(0, commaIndex);
     movieRating = stod(line.substr(commaIndex+1));
     if (movieName[0] == '\"') {
-        movieName = movieName.substr(1, movieName.length() - 2);
+        movieName = line.substr(1, commaIndex - 2);
+    }
+    else{
+        movieName = line.substr(0, commaIndex);
     }
     return true;
 }
-/*bool buffered_getline(std::istream& input, std::string& output) {
-    static char buffer[4096];
-    static size_t bufferIndex = 0;
-    static size_t bytesRead = 0;
-
-    output.clear();  // Clear the output string
-
-    while (true) {
-        if (bufferIndex == bytesRead) {
-            input.read(buffer, 4096);
-            bytesRead = input.gcount();  // Number of bytes read
-            bufferIndex = 0;
-
-            if (bytesRead == 0) {
-                // End of file
-                return false;
-            }
-        }
-
-        char currentChar = buffer[bufferIndex++];
-        if (currentChar == '\n') {
-            // Found newline character, stop reading
-            return true;
-        } else {
-            // Append character to the output string
-            output.push_back(currentChar);
-        }
-    }
-}*/
-#define buffered_getline getline
 int main(int argc, char** argv){
+    //timer();
     ios_base::sync_with_stdio(false);
     cin.tie(NULL);
-    if (argc < 2){
-        cerr << "Not enough arguments provided (need at least 1 argument)." << '\n';
-        cerr << "Usage: " << argv[ 0 ] << " moviesFilename prefixFilename " << '\n';
-        exit(1);
+    string file1, file2;
+    if(argc==1){
+        file1="input_100_random.csv";
+        file2="prefix_large.txt";
     }
+    if(argc==2){
+        file1=argv[1];
+    }
+    if(argc==3){
+        file1=argv[1];
+        file2=argv[2];
+    }
+    ifstream movieFile (file1);
 
-    ifstream movieFile (argv[1]);
- 
     if (movieFile.fail()){
-        cerr << "Could not open file " << argv[1];
+        cerr << "Could not open file " << file1;
         exit(1);
     }
-  
     string line, movieName;
     double movieRating;
     vector<movie> movies;
-    movies.reserve(1000);
-    while (buffered_getline(movieFile, line) && parseLine(line, movieName, movieRating)){
-        movies.emplace_back(movieName, movieRating);
+    movies.reserve(100);
+    while (getline (movieFile, line) && parseLine(line, movieName, movieRating)){
+        movies.emplace_back(movieName,movieRating);
     }
     sort(movies.begin(), movies.end(), [](const movie&a, const movie&b){return a.name<b.name;});
 
@@ -81,11 +56,11 @@ int main(int argc, char** argv){
 
     if (argc == 2){
         for(movie e: movies){
-            cout<<e<<'\n';
+            cout << e.name << ", " << e.rat << '\n';
         }
         return 0;
     }
-    int indexes[28];
+    int indexes[27];//help reduce binary search's range
     char curr='a'-1;
     for(size_t i=0;i<movies.size();i++){
         char ch=movies[i].name[0];
@@ -94,53 +69,72 @@ int main(int argc, char** argv){
             indexes[curr-'a']=i;
         }
     }
-    while(curr<'z'+1){
+    while(curr<'z'+1){//let indexes['z"+1-'a'] won't overflow
         curr++;
         indexes[curr-'a']=movies.size();
     }
-    ifstream prefixFile (argv[2]);
+    ifstream prefixFile (file2);
 
     if (prefixFile.fail()) {
-        cerr << "Could not open file " << argv[2];
+        cerr << "Could not open file " << file2;
         exit(1);
     }
-
-    vector<string> prefixes;
-    prefixes.reserve(100);
-    while (buffered_getline(prefixFile, line)) {
-        if (!line.empty()) {
-            prefixes.push_back(line);
-        }
-    }
-    vector<movie> bests;
-    struct comparer{
-        bool operator()(const movie& movie, const string& prefix){return movie.name.compare(0, prefix.size(), prefix)<0;}
-        bool operator()(const string& prefix, const movie& movie){return movie.name.compare(0, prefix.size(), prefix)>0;}
-    } cmp;
-    for(string pr: prefixes){
-        char ch=pr[0]-'a';
-        int lb=indexes[(int)ch];
-        int ub=indexes[(int)ch+1];
-        auto st=lower_bound(movies.begin()+lb, movies.begin()+ub, pr, cmp);
-        if(st!=movies.end() && st->name.find(pr)!=string::npos){
-            auto ed=upper_bound(st, movies.begin()+ub, pr, cmp);
-            vector<movie> res(st,ed);
-            stable_sort(res.begin(), res.end(), [](const movie &a, const movie &b){return a.rating>b.rating;});
-            for(auto iter=st;iter!=ed;iter++) cout<<*iter<<'\n';
+    vector<best> bests;
+    bests.reserve(1000);
+    getline (prefixFile, line);
+    do{
+        int lower=indexes[line[0]-'a'];
+        int upper=indexes[line[0]-'a'+1];
+        auto st=lower_bound(movies.begin()+lower, movies.begin()+upper, line, comparer{});
+        if(st!=movies.end() && st->name.find(line)==0){
+            auto ed=upper_bound(st, movies.begin()+upper, line, comparer{});
+            vector<reference_wrapper<movie>> founds(st, ed);
+            stable_sort(founds.begin(), founds.end(), [](const movie &a, const movie &b){return a.rat>b.rat;});
+            for(movie e: founds) cout << e.name << ", " << e.rat << '\n';
+            if(founds.empty()){
+                exit(1);
+            }
+            bests.emplace_back(line, founds.front());
             cout<<'\n';
-            bests.push_back(*st);
         }
         else{
-            bests.push_back(movie{});
-            cout << "No movies found with prefix "<<pr<< '\n';
+            cout << "No movies found with prefix " << line << '\n';
         }
-    }
-    cout<<std::fixed << std::setprecision(1);
-    for(size_t i=0;i<prefixes.size();i++){
-        if(bests[i].name!="")
-            cout << "Best movie with prefix " << prefixes[i] << " is: " << bests[i].name << " with rating " << bests[i].rating << '\n';
+        
+    }while(getline(prefixFile, line));
+    
+    for(size_t i=0;i<bests.size();i++){
+        cout << "Best movie with prefix " << bests[i].pr << " is: " << bests[i].mov.get().name << " with rating "
+             << bests[i].mov.get().rat << '\n';
     }
     return 0;
 }
+/*
+runtime:
+    1. push_back n movies and then sort: O(l*n*log(n))
+    2. create an array of indexes for the first occur of every letter
+        to reduce the constant of binary search: O(n)
+    3. for every prefix O(m):
+        binary search for lower bound, upper bound Olog(n)
+        store the reference in a new vector, and stable_sort: O(k*log(k))
+        store the best movie's reference, O(1)
+        total: O(m(k*log(k)+log(n)))
+    4. print all best movies: O(m)
+in total: O(l*n*log(n) + m(k*log(k)+log(n)))
 
-/* Add your run time analysis for part 3 of the assignment here as commented block*/
+memory:
+    1. vector<movie> movies has n movie of O(l), O(nl)
+    2. vector<best> bests only stores reference of movies and prefix names
+        which is considered O(1), so the vector is O(m)
+in total: O(n*l + m)
+
+tradeoff:
+    I already optimize the memory complexity
+    which is at least O(n*l+m) to store necessary data.
+    if movies' number is much larger, and there may be duplicated prefixs,
+    I can use unordered map to map from first char to 
+    map<second char, sorted vector of movies>,
+    or even more layers of mapping
+    this may reduce run time, but requires more memory.
+
+*/
