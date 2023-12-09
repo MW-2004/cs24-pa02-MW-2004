@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
 
     if (argc == 2) {
         for (movie &e : movies) {
-            outFile << e.name << ", " << e.rat << '\n';
+            outFile << e.name << ", " << e.rat << endl;
         }
         return 0;
     }
@@ -95,7 +95,6 @@ int main(int argc, char **argv) {
     }
 
     vector<best> bests;
-    bests.reserve(1000);
     getline(prefixFile, line);
     do {
         int lower = indexes[line[0] - 'a'];
@@ -105,21 +104,21 @@ int main(int argc, char **argv) {
             auto ed = upper_bound(st, movies.begin() + upper, line, comparer{});
             vector<reference_wrapper<movie>> founds(st, ed);
             stable_sort(founds.begin(), founds.end(), [](const movie &a, const movie &b) { return a.rat > b.rat; });
-            for (movie e : founds) outFile << e.name << ", " << e.rat << '\n';
+            for (movie &e : founds) outFile << e.name << ", " << e.rat << endl;
             if (founds.empty()) {
                 exit(1);
             }
             bests.emplace_back(line, founds.front());
-            outFile << '\n';
+            outFile << endl;
         } else {
-            outFile << "No movies found with prefix " << line << '\n';
+            outFile << "No movies found with prefix " << line << endl;
         }
 
     } while (getline(prefixFile, line));
 
     for (size_t i = 0; i < bests.size(); i++) {
         outFile << "Best movie with prefix " << bests[i].pr << " is: " << bests[i].mov.get().name << " with rating "
-                << bests[i].mov.get().rat << '\n';
+                << bests[i].mov.get().rat << endl;
     }
 
     return 0;

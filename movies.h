@@ -4,7 +4,7 @@
 #include <functional>
 #include <chrono>
 using namespace std;
-
+//for timing only
 struct Timer {
     std::chrono::time_point<std::chrono::system_clock> startTime;
     Timer() {
@@ -17,18 +17,21 @@ struct Timer {
     }
 };
 void timer();
+
 struct movie {
     string name;
     double rat;
-    movie(string& s, double d);
+    movie(string &s, double d);
 };
+
 struct best {
     string pr;
     reference_wrapper<movie> mov;
-    best(string& s, movie& m);
+    best(string &s, movie &m);
 };
+
 struct comparer {
-    bool operator()(const movie& movie, const string& prefix);
-    bool operator()(const string& prefix, const movie& movie);
+    bool operator()(const movie &movie, const string &prefix);
+    bool operator()(const string &prefix, const movie &movie);
 };
 #endif
